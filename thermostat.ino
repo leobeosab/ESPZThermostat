@@ -1,3 +1,8 @@
+/*
+  Author: Ryan Wise
+  Note: Use at your own risk, this is running on my pole barn and is working fine but do not run untrusted code on your own arduino connected to a furnace.
+*/
+
 #include <Wire.h>
 #include <WiFi.h>
 #include <WiFiClient.h>
@@ -17,12 +22,6 @@
 #define SOFT_RESTART 0
 #define HARD_RESTART 1
 
-/*
-Save # of restarts - 1
-Save bool value for if it was restarted by the automated process - 2
-00021111
-*/
-
 // NOT recommended: Usually doesn't fix not connecting problem
 // Soft Restart: WiFi gets reinitialized
 //#define WIFI_ERR_RESTART_TYPE SOFT_RESTART
@@ -38,8 +37,8 @@ String Temp = String("Unknown");
 String humidity = String("Unknown");
 
 // START CONFIG
-const char* ssid = "Shop time my dudes";
-const char* password = "TheShopPasswordIsMyPassword";
+const char* ssid = "your wifi name here";
+const char* password = "your wifi password here";
 
 const int minTemp = 40;
 const int maxTemp = 75;

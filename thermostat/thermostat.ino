@@ -15,7 +15,7 @@
 #define EEPROM_SIZE 1
 
 #define DHTPIN 22
-#define DHTTYPE DHT11
+#define DHTTYPE DHT22
 
 #define FURNACE_PIN 27
 
@@ -37,11 +37,11 @@ String Temp = String("Unknown");
 String humidity = String("Unknown");
 
 // START CONFIG
-const char* ssid = "your wifi name here";
-const char* password = "your wifi password here";
+const char* ssid = "your_ssid";
+const char* password = "your_password";
 
 const int minTemp = 40;
-const int maxTemp = 75;
+const int maxTemp = 85;
 const int defaultTemp = minTemp;
 
 const int maxRestarts = 8;
@@ -50,9 +50,18 @@ const int maxRestarts = 8;
 const int tickRate = 1;
 
 // 5 min cooldown time
-const int cooldownTimeInSeconds = 5 * 60;
+const int cooldownTimeInSeconds = 15 * 60;
 const int maxFurnaceOnTime = 30 * 60; // 30 minutes
 // END CONFIG
+
+// hacky fix to make sure the temperture is consistently lower than target for over
+// a minute
+const int HEAT_ON_COUNT_TO_START = 60;
+int heatOnCounter = 0;
+
+// same as above but for heat off
+const int HEAT_OFF_COUNT_TO_STOP = 60;
+int heatOffCounter = 0;
 
 // START GLOBAL
 unsigned long lastTickTime;
@@ -224,11 +233,11 @@ void PrintStatus() {
 
   String furnaceState;
   if (furnaceOn) {
-    furnaceState = String("Furnace On For: ") + furnaceOnFor + String("s");
+    furnaceState = String("On: ") + furnaceOnFor + String("s HOFFC: ") + heatOffCounter + String("/") + HEAT_OFF_COUNT_TO_STOP + String("s");
   } else if (cooldown) {
-    furnaceState = String("Cooling Down For: ") + cooldownTimer + String("s");
+    furnaceState = String("Cooling: ") + cooldownTimer + String("/") + cooldownTimeInSeconds;
   } else {
-    furnaceState = "Furnace Off";
+    furnaceState = String("Off. honc: ") + heatOnCounter + String("/") + HEAT_ON_COUNT_TO_START + String("s");
   }
 
   display.drawString(0, 48, furnaceState);
@@ -261,12 +270,31 @@ void checkFurnace() {
 
   if (furnaceOn) {
     furnaceOnFor++;
-    if (currentTemp >= targetTemp || furnaceOnFor > maxFurnaceOnTime) {
-      heatOff();
+    if (currentTemp >= targetTemp) {
+      heatOffCounter++;
+    } else {
+      heatOffCounter = 0;
     }
+
+    if (heatOffCounter >= HEAT_OFF_COUNT_TO_STOP || currentTemp >= 85 || furnaceOnFor > maxFurnaceOnTime) {
+      heatOff();
+      heatOffCounter = 0;
+    }
+
   } else {
+    // if the currently read temp is lower than target
     if (currentTemp < targetTemp) {
-      heatOn();
+      // add one to heat count in order to turn furnace on
+      heatOnCounter++;
+      if (heatOnCounter >= HEAT_ON_COUNT_TO_START) {
+        heatOn();
+
+        // reset heat on counter
+        heatOnCounter = 0;
+      }
+    } else {
+      // if the temperture is higher than target, reset the counter
+      heatOnCounter = 0;
     }
   }
 }
